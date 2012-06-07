@@ -9,7 +9,8 @@ Christopphe Boudet 2012
 
 import os
 import sys
-
+import time
+import datetime
 
 class Logger():
     
@@ -47,19 +48,24 @@ class Logger():
             if str(num)[-1]:
                 if str(num)[-1] in date_letter:
                     index = date_letter.index(str(num)[-1])
-                    return int(num[:-1]) * date_convertion[index]
+                    return int(num[:-1]) * date_convertion[index] * 60
         usage(True)
         
     def get_file_to_rotate(self, files):
         """return list of file to rotate"""
         rotate = []
-        if self.mode == 'size':
-            for file in files:
-                if os.path.isfile(file):
+        for file in files:
+            if os.path.isfile(file):
+                if self.mode == 'size':
                     if os.path.getsize(file) >= self.delay:
                         rotate.append(file)
                 else:
-                    print "{0} is not a file".format(file)
+                    created = os.path.getctime(file)
+                    now = time.time()
+                    if now - created >= self.delay:
+                        rotate.append(file) 
+            else:
+                print "{0} is not a file".format(file)
 
 def usage(exit=False):
     print
