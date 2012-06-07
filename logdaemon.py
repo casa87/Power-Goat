@@ -23,7 +23,8 @@ class Logger():
             self.delay = self.sizeof_fmt(delay)
         else:
             usage(True)
-        self.get_file_to_rotate(files)
+        self.files = files
+        
 
     def sizeof_fmt(self, num):
         """transform human size into int"""
@@ -56,6 +57,7 @@ class Logger():
         rotate = []
         for file in files:
             if os.path.isfile(file):
+                
                 if self.mode == 'size':
                     if os.path.getsize(file) >= self.delay:
                         rotate.append(file)
@@ -66,6 +68,18 @@ class Logger():
                         rotate.append(file) 
             else:
                 print "{0} is not a file".format(file)
+    
+    def check_file(self):
+        """"check file to rotate"""
+        self.file_rotate = self.get_file_to_rotate(self.files)
+    
+    def rotate(self, max_copy):
+        """rotate file"""
+        if self.file_rotate:
+            for file in self.file_rotate:
+                print os.path.dirname(file), file
+        else:
+            print "no rotation" 
 
 def usage(exit=False):
     print
@@ -81,4 +95,8 @@ def usage(exit=False):
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         usage(True)
-    logger = Logger(sys.argv[1], sys.argv[2], sys.argv[3:])
+    logger = Logger(sys.argv[1], sys.argv[2], sys.argv[4:])
+    logger.check_file()
+    logger.rotate(sys.argv[3])
+    
+    
