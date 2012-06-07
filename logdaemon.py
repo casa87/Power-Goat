@@ -16,8 +16,26 @@ class Logger():
             self.mode = 'date'
         elif mode in ('size', 's'):
             self.mode = 'size'
+            print self.sizeof_fmt(delay)
         else:
             usage(True)
+
+    def sizeof_fmt(self, num):
+        """transform human size into int"""
+        size_letter = ['K','M','G','T']
+        if len(num) > 1:
+            if str(num)[-1]:
+                if str(num)[-1] in size_letter:
+                    index = size_letter.index(str(num)[-1])
+                    delay = int(num[:-1]) * (1024**(index+1))
+                    return int(delay)
+                elif str(num)[-1] in "0123456789":
+                    return int(num)
+                else:
+                    usage(True)
+        return num
+            
+
 
 def usage(exit=False):
     print
