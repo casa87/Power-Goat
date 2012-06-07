@@ -14,6 +14,7 @@ class Logger():
     def __init__(self, mode, delay):
         if mode in ('date', 'd'):
             self.mode = 'date'
+            print  self.sizeof_date(delay)
         elif mode in ('size', 's'):
             self.mode = 'size'
             print self.sizeof_fmt(delay)
@@ -35,7 +36,16 @@ class Logger():
                     usage(True)
         return num
             
-
+    def sizeof_date(self, num):
+        """transform date diff to date"""
+        date_letter = ['m', 'h', 'd', 'w']
+        date_convertion = [1, 60, 24*60, 24*60*7]
+        if len(num) > 1:
+            if str(num)[-1]:
+                if str(num)[-1] in date_letter:
+                    index = date_letter.index(str(num)[-1])
+                    return int(num[:-1]) * date_convertion[index]
+        usage(True)
 
 def usage(exit=False):
     print
