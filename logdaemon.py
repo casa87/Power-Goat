@@ -7,19 +7,22 @@ and rotate them
 Christopphe Boudet 2012
 """
 
+import os
 import sys
+
 
 class Logger():
     
-    def __init__(self, mode, delay):
+    def __init__(self, mode, delay, files):
         if mode in ('date', 'd'):
             self.mode = 'date'
-            print  self.sizeof_date(delay)
+            self.delay = self.sizeof_date(delay)
         elif mode in ('size', 's'):
             self.mode = 'size'
-            print self.sizeof_fmt(delay)
+            self.delay = self.sizeof_fmt(delay)
         else:
             usage(True)
+        self.get_file_to_rotate(files)
 
     def sizeof_fmt(self, num):
         """transform human size into int"""
@@ -46,6 +49,17 @@ class Logger():
                     index = date_letter.index(str(num)[-1])
                     return int(num[:-1]) * date_convertion[index]
         usage(True)
+        
+    def get_file_to_rotate(self, files):
+        """return list of file to rotate"""
+        rotate = []
+        if self.mode == 'size':
+            for file in files:
+                if os.path.isfile(file):
+                    if os.path.getsize(file) >= self.delay:
+                        rotate.append(file)
+                else:
+                    print "{0} is not a file".format(file)
 
 def usage(exit=False):
     print
@@ -59,6 +73,6 @@ def usage(exit=False):
         sys.exit(1)
         
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 4:
         usage(True)
-    logger = Logger(sys.argv[1], sys.argv[2])
+    logger = Logger(sys.argv[1], sys.argv[2], sys.argv[3:])
