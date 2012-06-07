@@ -12,7 +12,12 @@ import sys
 class Logger():
     
     def __init__(self, mode, delay):
-        print mode
+        if mode in ('date', 'd'):
+            self.mode = 'date'
+        elif mode in ('size', 's'):
+            self.mode = 'size'
+        else:
+            usage(True)
 
 def usage(exit=False):
     print
