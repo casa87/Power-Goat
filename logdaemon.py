@@ -89,7 +89,6 @@ class Logger():
                 if os.path.exists(os.path.join(path, file_name)):
                     #delete
                     if i == max_copy:
-                        print "delete"
                         os.remove(os.path.join(path, file_name))
                     #move
                     else:
