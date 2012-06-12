@@ -4,13 +4,14 @@
 log daemon to push log files on Amazon S3
 and rotate them
 
-Christopphe Boudet 2012
+Christophe Boudet 2012
 """
 
 import os
 import sys
 import time
 import datetime
+import subprocess
 
 
 class Logger():
@@ -79,33 +80,38 @@ class Logger():
     def rotate(self, max_copy):
         """rotate file"""
         max_copy = int(max_copy)
+        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         for file in self.file_rotate:
-            i = max_copy
             name = os.path.basename(file)
+            new_name = os.path.splitext(name)[0]
             path = os.path.dirname(file)
             #rotate older files
-            while i:
-                file_name = "{0}{1}".format(name, i)
-                if os.path.exists(os.path.join(path, file_name)):
-                    #delete
-                    if i == max_copy:
-                        os.remove(os.path.join(path, file_name))
-                    #move
-                    else:
-                        new_file_name = "{0}{1}".format(name, i+1)
-                        os.rename(os.path.join(path, file_name), os.path.join(path, new_file_name))
-                i -= 1
+            old_files = []
+            for filename in os.listdir(path):
+                if filename.startswith('{0}_'.format(new_name)):
+                    old_files.append(filename)
+            old_files = sorted(old_files, key=lambda x: int(x[len(new_name)+1:]), reverse=True)
+            print old_files
+            if len(old_files) >= max_copy - 1:
+                for file_delete in old_files[max_copy - 1:]:
+                    os.remove(os.path.join(path, file_delete))
             #rotate last one
-            if max_copy:
-                os.rename(os.path.join(path, name), os.path.join(path, "{0}1".format(name)))
-
+            #compress it with lzop if available
+            if os.path.exists('/usr/bin/lzop'):
+                subprocess.call(['/usr/bin/lzop', '-o', os.path.join(path, name), os.path.join(path, "{0}_{1}".format(new_name, timestamp))])
+            else:
+                os.rename(os.path.join(path, name), os.path.join(path, "{0}_{1}".format(new_name, timestamp)))
+        
+       
+           
 def usage(exit=False):
     print
     print 'Log daemon'
     print 
     print '{0} : '.format(sys.argv[0])
-    print 'size 100M        rotate every 100Mo'
-    print 'date 10d        rotate every 10 days'
+    print 'size 100M N       rotate every 100Mo'
+    print 'date 10d  N      rotate every 10 days'
+    print 'N                number of copy'
     print
     if exit:
         sys.exit(1)
