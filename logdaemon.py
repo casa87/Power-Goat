@@ -9,14 +9,16 @@ Christophe Boudet 2012
 
 import os
 import sys
+import boto
 import time
 import datetime
 import subprocess
+from boto.s3.key import Key
 
 
 class Logger():
 
-    def __init__(self, mode, delay, files):
+    def __init__(self, mode, delay, bucket, files):
         if mode in ('date', 'd'):
             self.mode = 'date'
             self.delay = self.sizeof_date(delay)
@@ -26,6 +28,7 @@ class Logger():
         else:
             usage(True)
         self.files = files
+        self.bucket = bucket
 
     def sizeof_fmt(self, num):
         """transform human size into int"""
@@ -101,6 +104,25 @@ class Logger():
                 subprocess.call(['/usr/bin/lzop', '-o', os.path.join(path, name), os.path.join(path, "{0}_{1}".format(new_name, timestamp))])
             else:
                 os.rename(os.path.join(path, name), os.path.join(path, "{0}_{1}".format(new_name, timestamp)))
+            #push on s3
+            try:
+                access_key =  os.environ['S3_ACCESS_KEY']
+                secret_key =  os.environ['S3_SECRET_KEY']
+            except:
+                print "declare your S3 access and secret key as environement variable"
+                print
+                print "S3_ACCESS_KEY"
+                print "S3_SECRET_KEY"
+            try:
+                s3_conn = boto.connect_s3(access_key, secret_key)
+            except:
+                print "S3 authentication failed"
+            key_name = "{0}/{1}_{2}".format(datetime.datetime.now().strftime('%Y/%m/%d'), new_name, timestamp)
+            bucket = s3_conn.get_bucket(self.bucket)
+            k = Key(bucket)
+            k.key = key_name
+            k.set_contents_from_filename(os.path.join(path, "{0}_{1}".format(new_name, timestamp)))
+            print key_name
         
        
            
@@ -108,10 +130,11 @@ def usage(exit=False):
     print
     print 'Log daemon'
     print 
-    print '{0} : '.format(sys.argv[0])
-    print 'size 100M N       rotate every 100Mo'
-    print 'date 10d  N      rotate every 10 days'
+    print '{0} size/date max #copy bucket file1 file2 .. fileN'.format(sys.argv[0])
+    print 'size 100M N bucket       rotate every 100Mo'
+    print 'date 10d  N bucket     rotate every 10 days'
     print 'N                number of copy'
+    print 'bucket         bucket name'
     print
     if exit:
         sys.exit(1)
@@ -119,9 +142,9 @@ def usage(exit=False):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 5:
         usage(True)
-    logger = Logger(sys.argv[1], sys.argv[2], sys.argv[4:])
+    logger = Logger(sys.argv[1], sys.argv[2], sys.argv[4], sys.argv[5:])
     logger.check_file()
     logger.rotate(sys.argv[3])
 
