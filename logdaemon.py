@@ -102,7 +102,8 @@ class Logger():
             #rotate last one
             #compress it with lzop if available
             if os.path.exists('/usr/bin/lzop'):
-                subprocess.call(['/usr/bin/lzop', '-o', os.path.join(path, name), os.path.join(path, "{0}_{1}".format(new_name, timestamp))])
+                subprocess.call(['/usr/bin/lzop', '-o', os.path.join(path, "{0}_{1}".format(new_name, timestamp)), os.path.join(path, name)])
+                os.remove(os.path.join(path, name))
             else:
                 os.rename(os.path.join(path, name), os.path.join(path, "{0}_{1}".format(new_name, timestamp)))
             #push on s3
@@ -114,6 +115,7 @@ class Logger():
                 print
                 print "S3_ACCESS_KEY"
                 print "S3_SECRET_KEY"
+                sys.exit()
             try:
                 s3_conn = boto.connect_s3(access_key, secret_key)
             except:
