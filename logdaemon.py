@@ -9,6 +9,7 @@ Christophe Boudet 2012
 
 import os
 import sys
+import json
 import boto
 import time
 import datetime
@@ -27,6 +28,8 @@ class Logger():
             self.delay = self.sizeof_fmt(delay)
         else:
             usage(True)
+        with open('/home/dotcloud/environment.json') as f:
+            self.env = json.load(f)
         self.files = files
         self.bucket = bucket
         self.prefix = prefix
@@ -85,6 +88,13 @@ class Logger():
         """rotate file"""
         max_copy = int(max_copy)
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        if os.path.exists('/usr/bin/lzop'):
+            end_of_timestamp = 8
+            extension = ".log.lzo"
+        else:
+            end_of_timestamp = 4
+            extension = ".log"
+            
         for file in self.file_rotate:
             name = os.path.basename(file)
             new_name = os.path.splitext(name)[0]
@@ -94,7 +104,9 @@ class Logger():
             for filename in os.listdir(path):
                 if filename.startswith('{0}_'.format(new_name)):
                     old_files.append(filename)
-            old_files = sorted(old_files, key=lambda x: int(x[len(new_name)+1:]), reverse=True)
+            
+             
+            old_files = sorted(old_files, key=lambda x: int(x[len(new_name)+1:-end_of_timestamp]), reverse=True)
             #print old_files
             if len(old_files) >= max_copy - 1:
                 for file_delete in old_files[max_copy - 1:]:
@@ -102,16 +114,16 @@ class Logger():
             #rotate last one
             #compress it with lzop if available
             if os.path.exists('/usr/bin/lzop'):
-                subprocess.call(['/usr/bin/lzop', '-o', os.path.join(path, "{0}_{1}".format(new_name, timestamp)), os.path.join(path, name)])
+                subprocess.call(['/usr/bin/lzop', '-o', os.path.join(path, "{0}_{1}.log.lzo".format(new_name, timestamp)), os.path.join(path, name)])
                 os.remove(os.path.join(path, name))
             else:
-                os.rename(os.path.join(path, name), os.path.join(path, "{0}_{1}".format(new_name, timestamp)))
+                os.rename(os.path.join(path, name), os.path.join(path, "{0}_{1}.log".format(new_name, timestamp)))
             #push on s3
             try:
-                access_key =  os.environ['S3_ACCESS_KEY']
-                secret_key =  os.environ['S3_SECRET_KEY']
+                access_key =  self.env['S3_ACCESS_KEY']
+                secret_key =  self.env['S3_SECRET_KEY']
             except:
-                print "declare your S3 access and secret key as environement variable"
+                print "declare your S3 access and secret key as environment variable"
                 print
                 print "S3_ACCESS_KEY"
                 print "S3_SECRET_KEY"
@@ -120,14 +132,21 @@ class Logger():
                 s3_conn = boto.connect_s3(access_key, secret_key)
             except:
                 print "S3 authentication failed"
-            key_name = "{0}/{1}_{2}_{3}".format(datetime.datetime.now().strftime('%Y/%m/%d'), self.prefix, new_name, timestamp)
+                sys.exit()
+            key_name = "{0}/{1}/{2}_{3}{4}".format(self.prefix, 
+                                    datetime.datetime.now().strftime('%Y/%m/%d'), 
+                                    self.prefix, 
+                                    timestamp,
+                                    extension)
             bucket = s3_conn.get_bucket(self.bucket)
             k = Key(bucket)
             k.key = key_name
-            k.set_contents_from_filename(os.path.join(path, "{0}_{1}".format(new_name, timestamp)))
+            k.set_contents_from_filename(os.path.join(path, "{0}_{1}{2}".format(new_name, 
+                                    timestamp,
+                                    extension)))
             #print key_name
             #k.get_contents_to_filename('/tmp/s3.log')
-        
+
 
 def usage(exit=False):
     print
@@ -148,7 +167,7 @@ def usage(exit=False):
 if __name__ == "__main__":
     if len(sys.argv) < 6:
         usage(True)
-    logger = Logger(sys.argv[1], sys.argv[2], sys.argv[4], sys.argv[4], sys.argv[6:])
+    logger = Logger(sys.argv[1], sys.argv[2], sys.argv[4], sys.argv[5], sys.argv[6:])
     logger.check_file()
     logger.rotate(sys.argv[3])
 
