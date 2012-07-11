@@ -28,7 +28,7 @@ class Logger():
             self.delay = self.sizeof_fmt(delay)
         else:
             usage(True)
-        with open('/home/dotcloud/environment.json') as f:
+        with open('{0}/environment.json'.format(os.path.expanduser('~'))) as f:
             self.env = json.load(f)
         self.files = files
         self.bucket = bucket
@@ -118,6 +118,18 @@ class Logger():
                 os.remove(os.path.join(path, name))
             else:
                 os.rename(os.path.join(path, name), os.path.join(path, "{0}_{1}.log".format(new_name, timestamp)))
+                
+                
+            #test for good name
+            if new_name == self.prefix:    
+                final_name = "{0}_{1}{2}".format(new_name, 
+                                    timestamp,
+                                    extension)
+            else:
+                final_name = "{0}_{1}_{2}{3}".format(self.prefix,
+                                    new_name, 
+                                    timestamp,
+                                    extension) 
             #push on s3
             try:
                 access_key =  self.env['S3_ACCESS_KEY']
@@ -133,11 +145,8 @@ class Logger():
             except:
                 print "S3 authentication failed"
                 sys.exit()
-            key_name = "{0}/{1}/{2}_{3}{4}".format(self.prefix, 
-                                    datetime.datetime.now().strftime('%Y/%m/%d'), 
-                                    self.prefix, 
-                                    timestamp,
-                                    extension)
+            key_name = "{0}/{1}".format(datetime.datetime.now().strftime('%Y/%m/%d'), 
+                                    final_name)
             bucket = s3_conn.get_bucket(self.bucket)
             k = Key(bucket)
             k.key = key_name
